@@ -14,7 +14,7 @@ resource "local_file" "public_key" {
     filename = "${path.module}/id_rsa.pub"
 }
 
-# Create ResourceGroups based on what's specified in variables.tf
+# Resource Group to contain all Azure Resources
 resource "azurerm_resource_group" "aks-rg" {
     location = var.location
     name     = "${var.prefix}-AKS-rg"
@@ -49,7 +49,7 @@ resource "azurerm_subnet" "subnet" {
 }
 
 
-# KeyVault
+# KeyVault (for Kubernetes secret storage/management)
 data "azurerm_client_config" "current" {}
 resource "azurerm_key_vault" "kv" {
     name                        = "AKS-kv"
@@ -63,7 +63,7 @@ resource "azurerm_key_vault" "kv" {
 }
 
 
-# Azure Container Registry
+# Azure Container Registry (for image control, instead of pulling directly from docker.io)
 resource "azurerm_container_registry" "acr" {
     name                = "containerRegistry1"
     resource_group_name = azurerm_resource_group.aks-rg.name
@@ -73,10 +73,10 @@ resource "azurerm_container_registry" "acr" {
 }
 
 
-# Managed Identity
+# Managed Identity (for AKS cluster and can define roles/permissions ahead of time)
 resource "azurerm_user_assigned_identity" "cluster-mi" {
     location            = var.location
-    name                = "example"
+    name                = "aks-cluster-mi"
     resource_group_name = azurerm_resource_group.aks-rg.name
 }
 
@@ -91,8 +91,13 @@ resource "azurerm_role_assignment" "example" {
     scope                = azurerm_container_registry.acr.id
     role_definition_name = "AcrPull"
 }
+resource "azurerm_role_assignment" "aks_monitoring_uami" {
+    principal_id         = azurerm_user_assigned_identity.cluster-mi.principal_id
+    role_definition_name = "Monitoring Metrics Publisher"
+    scope                = azurerm_log_analytics_workspace.aks_logs.id
+}
 
-# Create EntraID group for ClusterAdmins
+# Create EntraID group for ClusterAdmins (members of this group will receive Admin role for the cluster)
 data "azuread_client_config" "current" {}
 resource "azuread_group" "aks_admins" {
     display_name     = "AKS Admins"
@@ -102,7 +107,7 @@ resource "azuread_group" "aks_admins" {
 
 
 # AKS Cluster
-resource "azurerm_kubernetes_cluster" "example" {
+resource "azurerm_kubernetes_cluster" "aks" {
     name                = "Cluster1-aks"
     location            = var.location
     resource_group_name = azurerm_resource_group.aks-rg.name
@@ -136,7 +141,7 @@ resource "azurerm_kubernetes_cluster" "example" {
     }
 
     linux_profile {
-        admin_username = "ozymandias"
+        admin_username = "barfoo"
 
         ssh_key {
             key_data = tls_private_key.ssh_key.public_key_openssh
@@ -147,14 +152,54 @@ resource "azurerm_kubernetes_cluster" "example" {
         network_plugin      = "azure"
         dns_service_ip      = "10.240.0.10"
         service_cidr        = "10.240.0.0/16"
-        docker_bridge_cidr  = "172.17.0.1/16"
+        # docker_bridge_cidr  = "172.17.0.1/16"  # Appears to be deprecated? Leaving it, just in case
         network_policy      = "calico"
         outbound_type       = "loadBalancer"
         load_balancer_sku   = "standard"
     }
 
+    oms_agent {
+        log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_logs.id
+        msi_auth_for_monitoring_enabled = true
+    }
 
     tags = {
         Environment = "Production"
+    }
+}
+
+# Log Analytics Workspace (stores all azure-level metrics/logs from cluster)
+resource "azurerm_log_analytics_workspace" "aks_logs" {
+    name                = "aks-law-${random_id.log_suffix.hex}"
+    location            = var.location
+    resource_group_name = azurerm_resource_group.aks-rg.name
+    sku                 = "PerGB2018"
+    retention_in_days   = 30
+}
+
+# Cluster Metrics (configures azure monitor to collect metrics/logs specified below)
+resource "azurerm_monitor_diagnostic_setting" "aks_diag" {
+    name                       = "aks-monitoring"
+    target_resource_id         = azurerm_kubernetes_cluster.aks.id
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_logs.id
+
+    enabled_log {
+        category = "kube-apiserver"
+    }
+
+    enabled_log {
+        category = "kube-controller-manager"
+    }
+
+    enabled_log {
+        category = "kube-scheduler"
+    }
+
+    enabled_log {
+        category = "cluster-autoscaler"
+    }
+
+    enabled_metric {
+        category = "AllMetrics"
     }
 }
