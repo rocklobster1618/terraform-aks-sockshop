@@ -18,3 +18,11 @@ variable "location" {
 }
 
 
+
+variable "my_ip"{
+    default = ""        # If blank will pull public IP dynamically
+    type = "string"
+    description = "my own public IP address to be whitelisted for accessing the AKS cluster cmd-line"
+}
+
+
