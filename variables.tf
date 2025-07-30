@@ -1,6 +1,6 @@
 
 variable "subid"{
-    default     = "b5b97ba6-d17f-4a21-8d05-2a2fa1359c6e"
+    default     = "cdb51940-ec76-49d0-a6cf-a0984b845428"
     type        = string
     description = "the subscription to deploy this configuration to"
 }
@@ -18,10 +18,9 @@ variable "location" {
 }
 
 
-
 variable "my_ip"{
     default = ""        # If blank will pull public IP dynamically
-    type = "string"
+    type = string
     description = "my own public IP address to be whitelisted for accessing the AKS cluster cmd-line"
 }
 
