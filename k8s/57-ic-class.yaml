@@ -8,6 +8,3 @@ metadata:
 spec:
   controller: k8s.io/ingress-nginx
 
-
-
-
