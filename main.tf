@@ -25,7 +25,7 @@ resource "azurerm_virtual_network" "vnet" {
     name                = "${var.prefix}-AKS-VN1"
     location            = var.location
     resource_group_name = azurerm_resource_group.aks-rg.name
-    address_space       = ["10.0.0.0/16"]
+    address_space       = [var.vnet_range]
 
     tags = {
         LifeCyle = "Production"
@@ -37,7 +37,7 @@ resource "azurerm_subnet" "subnet" {
     name                 = "${azurerm_virtual_network.vnet.name}-sbnt1"
     resource_group_name  = azurerm_resource_group.aks-rg.name
     virtual_network_name = azurerm_virtual_network.vnet.name
-    address_prefixes     = ["10.0.1.0/24"]
+    address_prefixes     = [var.subnet_range]
     service_endpoints   = ["Microsoft.AzureActiveDirectory","Microsoft.ContainerRegistry","Microsoft.KeyVault","Microsoft.Storage"]
 
     delegation {
@@ -50,7 +50,7 @@ resource "azurerm_subnet" "subnet" {
 
 
 # KeyVault (for Kubernetes secret storage/management)
-data "azurerm_client_config" "current" {}
+
 resource "azurerm_key_vault" "kv" {
     name                        = "${var.prefix}-AKS-kv"
     location                    = var.location
@@ -111,14 +111,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
     name                = "${var.prefix}-cluster"
     location            = var.location
     resource_group_name = azurerm_resource_group.aks-rg.name
-    dns_prefix          = "exampleaks1"                               ###############
+    dns_prefix          = "${var.prefix}-dns"
     kubernetes_version  = "1.32.5"
     role_based_access_control_enabled = true
 
     default_node_pool {
         name       = "default"
-        node_count = 2
-        vm_size    = "Standard_B2ms"
+        node_count = var.node_count
+        vm_size    = var.node_size
     }
 
     identity {
@@ -133,7 +133,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     }
 
     api_server_access_profile {
-        authorized_ip_ranges = ["69.142.215.134/32"]
+        authorized_ip_ranges = [local.effective_ip]
     }
     
     key_vault_secrets_provider {
@@ -141,7 +141,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     }
 
     linux_profile {
-        admin_username = "barfoo"
+        admin_username = "admin"
 
         ssh_key {
             key_data = tls_private_key.ssh_key.public_key_openssh
@@ -164,7 +164,9 @@ resource "azurerm_kubernetes_cluster" "aks" {
     }
 
     tags = {
-        LifeCycle = "Production"
+        Owner       = "Travis"
+        Project     = "AKS-SockShop"
+        LifeCycle   = "Production"
     }
 }
 
