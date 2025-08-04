@@ -1,10 +1,11 @@
 # MUST BE PERFORMED BEFORE RUNNING ANY TERRAFORM COMMANDS
 
 
-### AUTHENTICATION
+### AZURE AUTHENTICATION
 # Authenticate to Azure before running any Terraform cmds
 # ideally the identity should have subscription 'owner' permissions
 az login
+
 
 ### SUBSCRIPTION PREP
 # Terraform can't provision anything without having the appropriate Resource Providers registered
@@ -49,3 +50,5 @@ for provider in "${providers[@]}"; do
   echo "Registering $provider..."
   az provider register --namespace "$provider"
 done
+
+
