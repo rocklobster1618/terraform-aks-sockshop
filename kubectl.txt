@@ -1,0 +1,33 @@
+### K8S AUTHENTICATION
+# 'Kubectl' and 'kubelogin' must both be installed locally to interact with the AKS Cluster post-provisioning
+# 'Kubectl' is obviously how you interact with the KubeAPI server
+# 'KubeLogin' is what lets you properly authenticate to the cluster through azure
+
+### KUBECTL
+# Follow instructions here to get kubectl installed locally:
+https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/
+
+
+### KUBELOGIN
+# https://azure.github.io/kubelogin/quick-start.html
+# https://learn.microsoft.com/en-us/azure/aks/enable-authentication-microsoft-entra-id#non-interactive-sign-in-with-kubelogin
+
+# Download/Install locally
+Invoke-WebRequest -Uri "https://github.com/Azure/kubelogin/releases/latest/download/kubelogin-win-amd64.zip" -OutFile "kubelogin.zip"
+Expand-Archive -Path "kubelogin.zip" -DestinationPath ".\kubelogin"
+
+# If on windows, create a environment variable pointing to where-ever Kubelogin is unzipped to
+
+
+### KUBECONFIG
+# Update local kubeconfig for deploying YAMLs manually
+az aks get-credentials -g <clusterResourceGroup> -n <clusterName> --admin
+
+### K8S ACCESS
+# KubeLogin modifies KubeConfig for direct K8s Access
+$env:KUBECONFIG = "C:\Users\$env:username\.kube\config"
+kubelogin convert-kubeconfig
+
+
+### HELPFUL
+Set-Alias -Name 'k' -Value 'kubectl'

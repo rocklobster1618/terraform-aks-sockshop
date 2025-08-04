@@ -23,12 +23,6 @@ variable "my_ip"{
     description = "my own public IP address to be whitelisted for accessing the AKS cluster cmd-line"
 }
 
-variable "my_ip"{
-    default = ""        # If blank will pull public IP dynamically
-    type = string
-    description = "my own public IP address to be whitelisted for accessing the AKS cluster cmd-line"
-}
-
 variable "vnet_range"{
     default = "10.0.0.0/16"
     type = string
@@ -39,4 +33,16 @@ variable "subnet_range"{
     default = "10.0.1.0/24"
     type = string
     description = "address range to use for the single subnet the AKS cluster will be deployed to. Must exist within Vnet range"
+}
+
+variable "node_size"{
+    default = "Standard_B2ms"
+    type = string
+    description = "azure VM size to use for Nodes"
+}
+
+variable "node_count"{
+    default = 2
+    type = number
+    description = "number of nodes to provision for the cluster"
 }

@@ -1,0 +1,51 @@
+# MUST BE PERFORMED BEFORE RUNNING ANY TERRAFORM COMMANDS
+
+
+### AUTHENTICATION
+# Authenticate to Azure before running any Terraform cmds
+# ideally the identity should have subscription 'owner' permissions
+az login
+
+### SUBSCRIPTION PREP
+# Terraform can't provision anything without having the appropriate Resource Providers registered
+
+# Register Azure Resource Providers for Subscription (Powershell)
+$Providers = @(
+    'Microsoft.AAD',
+    'Microsoft.Accounts',
+    'Microsoft.ApiManagement',
+    'Microsoft.AVS',
+    'Microsoft.Compute',
+    'Microsoft.DBforPostgreSQL',
+    'Microsoft.Diagnostics',
+    'Microsoft.KeyVault',
+    'Microsoft.Insights',
+    'Microsoft.ManagedIdentity',
+    'Microsoft.Network',
+    'Microsoft.Resources',
+    'Microsoft.Storage'
+)
+$Providers | Foreach-Object {
+    az provider register --namespace $_
+}
+
+# Register Azure Resource Providers for Subscription (Bash)
+providers=(
+    Microsoft.AAD
+    Microsoft.Accounts
+    Microsoft.ApiManagement
+    Microsoft.AVS
+    Microsoft.Compute
+    Microsoft.DBforPostgreSQL
+    Microsoft.Diagnostics
+    Microsoft.KeyVault
+    Microsoft.Insights
+    Microsoft.ManagedIdentity
+    Microsoft.Network
+    Microsoft.Resources
+    Microsoft.Storage
+)
+for provider in "${providers[@]}"; do
+  echo "Registering $provider..."
+  az provider register --namespace "$provider"
+done
